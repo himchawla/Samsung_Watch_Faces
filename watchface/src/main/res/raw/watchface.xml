@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Antique Bronze: all digits are LIVE WFF sources, not part of the artwork. -->
+<WatchFace width="450" height="450">
+    <Scene>
+        <!-- Normal background disappears in always-on display to reduce battery use. -->
+        <PartImage x="0" y="0" width="450" height="450">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Image resource="bronze_dial" />
+        </PartImage>
+
+        <!-- Date (live) -->
+        <PartText x="85" y="81" width="280" height="35">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="20" color="#F0C58B">
+                    <Template><![CDATA[%s, %d %s]]>
+                        <Parameter expression="[DAY_OF_WEEK_S]" />
+                        <Parameter expression="[DAY]" />
+                        <Parameter expression="[MONTH_S]" />
+                    </Template>
+                </Font>
+            </Text>
+        </PartText>
+
+        <!-- Primary digital time follows the device's 12/24 hour preference. -->
+        <DigitalClock x="40" y="120" width="370" height="77">
+            <TimeText x="0" y="0" width="370" height="77" format="h:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="76" weight="NORMAL" color="#FFE5BD" />
+            </TimeText>
+        </DigitalClock>
+
+        <!-- Three values use native WFF data sources (no special app/provider needed). -->
+        <!-- Battery percentage (not battery health). -->
+        <PartText x="68" y="226" width="74" height="33">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="25" weight="BOLD" color="#FFE5BD">
+                    <Template><![CDATA[%d%%]]>
+                        <Parameter expression="[BATTERY_PERCENT]" />
+                    </Template>
+                </Font>
+            </Text>
+        </PartText>
+        <PartText x="66" y="256" width="78" height="25">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="13" color="#D5A36F">BATTERY</Font>
+            </Text>
+        </PartText>
+
+        <!-- The current heart rate refresh cadence is controlled by Wear OS sensors. -->
+        <PartText x="184" y="226" width="82" height="33">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="27" weight="BOLD" color="#FFE5BD">
+                    <Template><![CDATA[%d]]>
+                        <Parameter expression="[HEART_RATE]" />
+                    </Template>
+                </Font>
+            </Text>
+        </PartText>
+        <PartText x="185" y="256" width="80" height="25">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="13" color="#D5A36F">BPM</Font>
+            </Text>
+        </PartText>
+
+        <!-- Current day's steps. -->
+        <PartText x="303" y="226" width="84" height="33">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="24" weight="BOLD" color="#FFE5BD">
+                    <Template><![CDATA[%d]]>
+                        <Parameter expression="[STEP_COUNT]" />
+                    </Template>
+                </Font>
+            </Text>
+        </PartText>
+        <PartText x="305" y="256" width="80" height="25">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
+            <Text align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="13" color="#D5A36F">STEPS</Font>
+            </Text>
+        </PartText>
+    </Scene>
+</WatchFace>
