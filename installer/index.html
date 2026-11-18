@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch Face Installer</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --text: #1c1b19; --muted: #6b6862; --line: #e4e1db;
+    --accent: #b8742a; --accent-text: #ffffff; --ok: #2f7d4f; --bad: #b3261e; --chip: #f0ece5;
+    --shadow: 0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141312; --panel: #1e1d1b; --text: #eeeae4; --muted: #a29d95; --line: #34322e;
+      --accent: #e0a04f; --accent-text: #1a1206; --ok: #6cc28d; --bad: #f2867e; --chip: #2a2825;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.01em; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+           padding: 18px; box-shadow: var(--shadow); margin-bottom: 24px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, input { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+                  border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  select { flex: 1 1 260px; }
+  input { flex: 1 1 160px; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 7px 14px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--panel); color: var(--text); white-space: nowrap; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.danger { color: var(--bad); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.busy::after { content: "…"; }
+  details { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; }
+  ol { padding-left: 20px; margin: 10px 0 14px; color: var(--muted); }
+  ol b { color: var(--text); font-weight: 600; }
+  .step { margin: 10px 0; }
+  .step label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+          box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+  .preview { width: 180px; height: 180px; border-radius: 50%; align-self: center; object-fit: cover;
+             background: #000; border: 6px solid var(--chip); }
+  .card h3 { margin: 0; font-size: 17px; }
+  .desc { margin: 0; color: var(--muted); font-size: 14px; }
+  .meta { font-size: 12.5px; color: var(--muted); display: grid; gap: 2px; word-break: break-all; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--chip); }
+  .chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); }
+  .card .row { margin-top: auto; }
+  .card .row button { flex: 1 1 auto; }
+  #log { white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+         margin: 0; max-height: 260px; overflow: auto; color: var(--muted); }
+  #log .ok { color: var(--ok); } #log .bad { color: var(--bad); }
+  code { font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip);
+         padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Watch Face Installer</h1>
+  <p class="sub">Install this repo's faces on your watch over Wi-Fi. Keep the watch and this computer on the same network.</p>
+
+  <section class="panel">
+    <h2>Watch</h2>
+    <div class="row">
+      <select id="device" aria-label="Connected watch"></select>
+      <button id="refresh">Refresh</button>
+      <button id="disconnect" class="danger">Disconnect</button>
+    </div>
+    <div class="status" id="adbStatus"></div>
+    <details id="connectHelp">
+      <summary>Connect a watch</summary>
+      <ol>
+        <li>On the watch: <b>Settings → About watch → Software</b>, tap <b>Software version</b> 5 times to enable developer options.</li>
+        <li><b>Settings → Developer options</b>: turn on <b>ADB debugging</b> and <b>Wireless debugging</b>.</li>
+        <li>First time only: in Wireless debugging tap <b>Pair new device</b> and enter the pairing IP:port and code below.</li>
+        <li>Then enter the IP address &amp; port shown on the main Wireless debugging screen (it differs from the pairing port) and press Connect.</li>
+      </ol>
+      <div class="step">
+        <label for="pairHost">Pair (first time): pairing IP:port and 6-digit code</label>
+        <div class="row">
+          <input id="pairHost" placeholder="192.168.1.20:37541" autocomplete="off">
+          <input id="pairCode" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="off">
+          <button id="pair">Pair</button>
+        </div>
+      </div>
+      <div class="step">
+        <label for="connectHost">Connect: IP address &amp; port</label>
+        <div class="row">
+          <input id="connectHost" placeholder="192.168.1.20:41235" autocomplete="off">
+          <button id="connect" class="primary">Connect</button>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <div class="grid" id="faces"></div>
+
+  <section class="panel" style="margin-top:24px">
+    <h2>Activity</h2>
+    <pre id="log">Ready.</pre>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let state = { faces: [], devices: [] };
+let installed = new Set();
+let busy = false;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+function log(text, ok) {
+  const line = document.createElement("div");
+  if (ok !== undefined) line.className = ok ? "ok" : "bad";
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  $("log").prepend(line);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({ ok: false, message: `HTTP ${res.status}` }));
+  if (!res.ok && data.ok === undefined) data.ok = false;
+  return data;
+}
+
+function selectedSerial() {
+  const d = state.devices.find((d) => d.serial === $("device").value);
+  return d && d.state === "device" ? d.serial : "";
+}
+
+async function run(button, label, path, body, after) {
+  if (busy) return;
+  busy = true; button.classList.add("busy"); render();
+  log(`${label}…`);
+  try {
+    const r = await api(path, body);
+    log(r.message || (r.ok ? "Done." : "Failed."), r.ok);
+    if (after) await after(r);
+  } catch (e) {
+    log(`${label} failed: ${e}`, false);
+  } finally {
+    busy = false; button.classList.remove("busy");
+    await refresh();
+  }
+}
+
+async function refresh() {
+  try {
+    state = await api("/api/state");
+  } catch (e) {
+    $("adbStatus").textContent = "Lost contact with the installer server. Is it still running?";
+    return;
+  }
+  const serial = selectedSerial() || (state.devices.find((d) => d.state === "device") || {}).serial || "";
+  installed = new Set();
+  if (serial) {
+    const r = await api(`/api/installed?serial=${encodeURIComponent(serial)}`);
+    if (r.ok) installed = new Set(r.installed);
+  }
+  render(serial);
+}
+
+function render(preferSerial) {
+  const sel = $("device");
+  const current = preferSerial ?? sel.value;
+  sel.replaceChildren();
+  if (!state.devices.length) sel.append(new Option("No watch connected", ""));
+  for (const d of state.devices) {
+    const note = d.state === "device" ? "" : ` (${d.state})`;
+    sel.append(new Option(`${d.model || "Device"} · ${d.serial}${note}`, d.serial));
+  }
+  if (state.devices.some((d) => d.serial === current)) sel.value = current;
+  const serial = selectedSerial();
+  $("disconnect").disabled = busy || !sel.value;
+  $("refresh").disabled = busy;
+  for (const id of ["pair", "connect"]) $(id).disabled = busy;
+  if (!state.devices.length && !$("connectHelp").dataset.touched) $("connectHelp").open = true;
+
+  const unauth = state.devices.find((d) => d.serial === sel.value && d.state !== "device");
+  $("adbStatus").textContent = !state.adb
+    ? "adb was not found. Install Android platform-tools (brew install android-platform-tools) and restart the server."
+    : unauth ? `Watch state is "${unauth.state}". Accept the debugging prompt on the watch, then Refresh.`
+    : `Using ${state.adb}` + (state.repo ? ` · APK downloads from github.com/${state.repo} (release "${state.release}")` : "");
+
+  const grid = $("faces");
+  grid.replaceChildren();
+  for (const f of state.faces) grid.append(card(f, serial));
+  if (!state.faces.length) grid.textContent = "No faces found in faces/.";
+}
+
+function card(f, serial) {
+  const el = document.createElement("article");
+  el.className = "card";
+  const img = Object.assign(document.createElement("img"), {
+    className: "preview", src: `/preview/${f.id}.png`, alt: `${f.name} preview`, loading: "lazy" });
+  const h = Object.assign(document.createElement("h3"), { textContent: f.name });
+  const p = Object.assign(document.createElement("p"), { className: "desc", textContent: f.description });
+
+  const chips = document.createElement("div");
+  chips.className = "chips";
+  const chip = (text, cls = "") => chips.append(Object.assign(document.createElement("span"),
+    { className: `chip ${cls}`, textContent: text }));
+  chip(f.apk ? `APK: ${f.apk.source}` : "No APK yet", f.apk ? "" : "bad");
+  if (serial) chip(installed.has(f.id) ? "Installed" : "Not installed", installed.has(f.id) ? "ok" : "");
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  const lines = [f.package];
+  if (f.apk) lines.push(`${f.apk.path} · ${(f.apk.size / 1e6).toFixed(1)} MB · ${new Date(f.apk.mtime * 1000).toLocaleString()}`);
+  for (const t of lines) meta.append(Object.assign(document.createElement("span"), { textContent: t }));
+
+  const row = document.createElement("div");
+  row.className = "row";
+  const btn = (text, cls, disabled, onClick) => {
+    const b = Object.assign(document.createElement("button"), { textContent: text, className: cls, disabled: busy || disabled });
+    b.addEventListener("click", () => onClick(b));
+    row.append(b);
+  };
+  btn("Download latest", "", !state.repo, (b) =>
+    run(b, `Downloading ${f.name}`, "/api/download", { face: f.id }));
+  btn(installed.has(f.id) ? "Reinstall" : "Install", "primary", !serial || !f.apk, (b) =>
+    run(b, `Installing ${f.name}`, "/api/install", { face: f.id, serial }));
+  if (installed.has(f.id)) btn("Uninstall", "danger", !serial, (b) => {
+    if (confirm(`Uninstall ${f.name} from the watch?`))
+      run(b, `Uninstalling ${f.name}`, "/api/uninstall", { face: f.id, serial });
+  });
+  el.append(img, h, p, chips, meta, row);
+  return el;
+}
+
+$("refresh").addEventListener("click", () => { log("Refreshing…"); refresh(); });
+$("device").addEventListener("change", () => refresh());
+$("connectHelp").addEventListener("toggle", (e) => { e.target.dataset.touched = "1"; });
+$("disconnect").addEventListener("click", (e) =>
+  run(e.target, "Disconnecting", "/api/disconnect", { serial: $("device").value }));
+$("pair").addEventListener("click", (e) => {
+  store.set("pairHost", $("pairHost").value);
+  run(e.target, "Pairing", "/api/pair", { host: $("pairHost").value, code: $("pairCode").value },
+      (r) => { if (r.ok) $("pairCode").value = ""; });
+});
+$("connect").addEventListener("click", (e) => {
+  store.set("connectHost", $("connectHost").value);
+  run(e.target, `Connecting to ${$("connectHost").value}`, "/api/connect", { host: $("connectHost").value });
+});
+$("pairHost").value = store.get("pairHost");
+$("connectHost").value = store.get("connectHost");
+refresh();
+</script>
+</body>
+</html>

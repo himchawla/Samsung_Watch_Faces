@@ -2,10 +2,14 @@
 <!-- Antique Bronze: all digits are LIVE WFF sources, not part of the artwork. -->
 <WatchFace width="450" height="450">
     <Scene>
-        <!-- Normal background disappears in always-on display to reduce battery use. -->
+        <!-- Use a sparse artwork in ambient mode to reduce illuminated pixels. -->
         <PartImage x="0" y="0" width="450" height="450">
             <Variant mode="AMBIENT" target="alpha" value="0" />
             <Image resource="bronze_dial" />
+        </PartImage>
+        <PartImage x="0" y="0" width="450" height="450" alpha="0">
+            <Variant mode="AMBIENT" target="alpha" value="255" />
+            <Image resource="bronze_dial_ambient" />
         </PartImage>
 
         <!-- Date (live) -->
@@ -24,8 +28,17 @@
 
         <!-- Primary digital time follows the device's 12/24 hour preference. -->
         <DigitalClock x="40" y="120" width="370" height="77">
+            <Variant mode="AMBIENT" target="alpha" value="0" />
             <TimeText x="0" y="0" width="370" height="77" format="h:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER">
                 <Font family="SYNC_TO_DEVICE" size="76" weight="NORMAL" color="#FFE5BD" />
+            </TimeText>
+        </DigitalClock>
+
+        <!-- A smaller clock leaves room in the ambient illuminated-pixel budget. -->
+        <DigitalClock x="120" y="137" width="210" height="42" alpha="0">
+            <Variant mode="AMBIENT" target="alpha" value="255" />
+            <TimeText x="0" y="0" width="210" height="42" format="h:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER">
+                <Font family="SYNC_TO_DEVICE" size="40" weight="NORMAL" color="#C69A69" />
             </TimeText>
         </DigitalClock>
 

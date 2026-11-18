@@ -1,42 +1,58 @@
-# Antique Bronze Diwali — Galaxy Watch Ultra
+# Samsung Watch Faces
 
-A real **Wear OS Watch Face Format (WFF v1)** Android Studio project for the Galaxy Watch Ultra, with a rich antique-bronze Diwali background.
+A collection of Wear OS **Watch Face Format (WFF v1)** watch faces for the Galaxy Watch (built and tested against the Watch Ultra), plus a local web UI that installs them on your watch over Wi-Fi.
 
-## What is live (NOT baked into the wallpaper)
+| Face | Folder |
+| --- | --- |
+| Antique Bronze Diwali | [`faces/antique-bronze-diwali`](faces/antique-bronze-diwali/README.md) |
 
-- Clock: device-synced 12/24-hour time via `DigitalClock` / `TimeText`
-- Date: day of week, day and month (`DAY_OF_WEEK_S`, `DAY`, `MONTH_S`)
-- Battery **percentage**: `[BATTERY_PERCENT]` (this is not battery degradation/health)
-- Heart rate (BPM): `[HEART_RATE]` (availability/update rate depend on watch sensing settings)
-- Steps today: `[STEP_COUNT]`
-- Always-on (ambient) display: shows time on black, hides wallpaper and secondary stats
+## Install a face with the web UI
 
-All live values are defined in `watchface/src/main/res/raw/watchface.xml`. The preview image uses illustrative numbers **only inside the static gallery preview**; the actual face renders live values.
+```sh
+python3 installer/server.py
+```
 
-## Build on a PC (Android Studio)
+This opens `http://127.0.0.1:8765`. It needs Python 3.9+ and `adb` (`brew install android-platform-tools`), and nothing else.
 
-1. Extract this ZIP and open the folder `AntiqueBronzeDiwaliWatchFace` with Android Studio.
-2. Allow Gradle sync and Android SDK 35 installation. The project uses Android Gradle Plugin **8.8.2** and JDK 17+.
-3. If Android Studio asks for a Gradle distribution, choose Gradle **8.10.2** or compatible. This source archive does **not** contain a Gradle wrapper JAR.
-4. Select the `watchface` module, then **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-5. Find the APK at `watchface/build/outputs/apk/debug/watchface-debug.apk`.
-6. Enable developer options and wireless debugging on the Galaxy Watch Ultra, connect it over ADB, then run `adb install -r path/to/watchface-debug.apk`. On the watch, select the face in the watch face picker; depending on tools, Android Studio's watch-face run configuration can deploy/select automatically.
+1. **Connect the watch.** Turn on *Developer options → ADB debugging + Wireless debugging* on the watch. Pair once with the code from *Pair new device*, then connect with the IP:port on the Wireless debugging screen. The page walks you through it.
+2. **Get the APK.** Click **Download latest** to fetch it from this repo's [`latest` release](https://github.com/himchawla/Samsung_Watch_Faces/releases/tag/latest), which CI publishes on every push to `main`. A local build is also picked up automatically, and the newest APK wins.
+3. Click **Install**, then long-press the watch face on the watch and choose the new one.
 
-Recommended: latest Android Studio with WFF-aware XML editor/validator support. See https://developer.android.com/training/wearables/wff/setup and https://developer.android.com/training/wearables/wff/build .
+Why a local server rather than a hosted page? Browsers can't open the raw TCP connection ADB needs, and the watch has no USB data port. The server only listens on localhost and rejects cross-site requests.
 
-### Change the design
+## Repo layout
 
-- Replace `watchface/src/main/res/drawable/bronze_dial.png` with your artwork (600x600 PNG; retain the filename).
-- Edit XML coordinates, fonts, and colors in `watchface.xml`.
-- Static sample preview is `watchface/src/main/res/drawable/preview.png`.
+```
+faces/<face-id>/          one face = one Gradle module = one APK
+  face.json               name, description, package (shown in the installer)
+  build.gradle.kts        applicationId must equal face.json "package"
+  src/main/res/raw/watchface.xml
+  src/main/res/drawable/preview.png
+  verify.py               optional face-specific checks
+installer/                web UI (server.py + index.html, standard library only)
+tools/verify.py           preflight for every face (also runs in CI)
+tools/new_face.py         scaffold a new face
+signing/debug.keystore    shared debug key, so CI and local builds can update each other
+```
 
-### Validation note
+## Add a face
 
-The XML is syntactically parsed and checked for required files by `verify_project.py`. **I could not compile or test an APK in this environment** because the Android SDK, Gradle and an attached Wear OS watch aren't present. Final WFF schema and device render validation still need Android Studio / a watch.
+```sh
+python3 tools/new_face.py midnight-blue "Midnight Blue" --description "Minimal blue dial"
+# edit faces/midnight-blue/src/main/res/raw/watchface.xml and preview.png
+python3 tools/verify.py
+```
 
-### Useful sources
+Gradle (`settings.gradle.kts`), CI and the installer discover `faces/*` automatically, so there is nothing to register. Give every face a unique package name. Changing the package of a published face makes it a different app on the watch.
 
-- https://developer.android.com/training/wearables/wff
-- https://developer.android.com/reference/wear-os/wff/common/attributes/source-type
-- https://developer.android.com/reference/wear-os/wff/group/part/text/formatter/template
-- https://developer.android.com/training/wearables/wff/time
+## Build
+
+- **CI (no local setup):** `.github/workflows/build-watchface.yml` runs `tools/verify.py`, builds every face, uploads a `watch-face-apks` artifact, and on `main` replaces the `latest` release with `<face-id>.apk` files.
+- **Locally:** open the repo in Android Studio (SDK 35, JDK 17+, AGP 8.8.2), or run `gradle assembleDebug` with Gradle 8.10.2+ and `ANDROID_HOME` set. Build a single face with `gradle :<face-id>:assembleDebug`. APKs land in `faces/<face-id>/build/outputs/apk/debug/`.
+- **Without the web UI:** `adb install -r dist/<face-id>.apk`.
+
+### Signing
+
+Every face is signed with `signing/debug.keystore` (password `android`). Its password is public by design, which is fine for personal sideloading. It also means CI and local builds share one signing key, so installing over an existing copy works. Faces installed before this keystore existed must be uninstalled once (the installer has an Uninstall button). Create a private release key before publishing to Google Play.
+
+WFF schema validation happens during the Gradle build. `tools/verify.py` is only a quick preflight check.
